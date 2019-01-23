@@ -6,7 +6,7 @@ Python3.5
 # install
 - create new folder
 - open terminal there
-- from there, run `cmake x', where x is path to the code source
+- run `cmake x', where x is path to the code source
 - run `make'
 
 # use
