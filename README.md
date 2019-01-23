@@ -1,6 +1,8 @@
 # needs
 Python3.5
 
+# description available in IPsig.pdf
+
 # install
 - create new folder
 - from there, run `cmake x', where x is path to the code source
