@@ -46,6 +46,12 @@ PYBIND11_MODULE(pyIPSIG, m)
 		.def("pos2index", &System::pos2index)
 		.def("index2pos", &System::index2pos)
 		.def("iterate", &System::iterate)
+		.def("SIG", &System::SIGp)
+		.def("calcSIG", &System::calcSIG)
+		.def("eval", &System::eval)
+		.def_readonly("LowSig", &System::LowSig)
+		.def_readonly("HiSig", &System::HiSig)
+		.def_readonly("validSig", &System::validSig)
 		;
   
     

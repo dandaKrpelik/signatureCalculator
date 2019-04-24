@@ -19,7 +19,9 @@ using posvec = vector<size_t>;
 	//~ uint64_t bits[4];	//256bin unisgned int
 //~ };
 using bigInt = __uint128_t;
-using dick = map<bigInt, bigInt>;
+using indexType = size_t;
+using dick = map<indexType, bigInt>;
+using fdick = map<indexType, float>;
 
 
 size_t binomialCoeff(size_t n, size_t k) 
@@ -32,7 +34,7 @@ size_t binomialCoeff(size_t n, size_t k)
   return  binomialCoeff(n-1, k-1) + binomialCoeff(n-1, k); 
 } 
 
-void addToDick(dick* d, bigInt pos, bigInt val)
+void addToDick(dick* d, indexType pos, bigInt val)
 {
 	dick::iterator it = d->find(pos);
 	if (it == d->end())
@@ -133,10 +135,15 @@ class System
 	
 	vector<Branch*> branch;
 	
-	vector<bigInt> sig1;		//counting ones and zeros
-	vector<bigInt> sig0;
+	vector<indexType> sig1;		//counting ones and zeros
+	vector<indexType> sig0;
 		
 	vector<posvec> binCo;		//precalculate binomial coefficients
+	
+	
+	bool validSig = 0;
+	fdick LowSig;
+	fdick HiSig;
 		
 	~System()
 	{
@@ -209,9 +216,79 @@ class System
 		registerBranches();
 	}
 	
-	bigInt pos2index(posvec pos)
+	bool eval(vector<bool> x)
 	{
-		bigInt out = 0;
+		posvec minpath = minPath(*g, x);
+		return !minpath.empty();
+	}
+	
+	vector<float> SIGp(posvec pos)
+	{
+		indexType index = pos2index(pos);
+		return SIGi(index);
+	}
+	vector<float> SIGi(indexType index)
+	{
+		if (!validSig) calcSIG();
+		
+		vector<float> P(2);
+		fdick::iterator it = LowSig.find(index);
+		if (it == LowSig.end())
+		{
+			P[0] = 0.;
+		}
+		else
+		{
+			P[0] = it->second;
+		}
+		
+		it = HiSig.find(index);
+		if (it == LowSig.end())
+		{
+			P[1] = 1.;
+		}
+		else
+		{
+			P[1] = it->second;
+		}
+		return P;
+	}
+	
+	void calcSIG()
+	{
+		if (validSig) return;
+		
+		LowSig.clear();
+		HiSig.clear();
+		
+		PositionIterator it(M);
+		posvec P(K);
+		indexType index;
+		while (!it.finished)
+		{
+			it.copypos(&P);
+			index = pos2index(P);
+			bigInt Nsum = 1;
+			float Plow = sig1[index];
+			float Phi = sig0[index];
+			for (size_t ki = 0; ki < K; ki++)
+			{
+				//Nsum *= binCo[M[ki]][pos[ki]];
+				Plow /= binCo[M[ki]][P[ki]];
+				Phi /= binCo[M[ki]][P[ki]];
+			}			
+			Phi = 1. - Phi;
+			if (Plow > 0) LowSig.insert(make_pair(index, Plow));
+			if (Phi > 0 ) HiSig.insert(make_pair(index, Phi));
+			
+			++it;
+		}
+		validSig = 1;
+	}
+
+	indexType pos2index(posvec pos)
+	{
+		indexType out = 0;
 		for (int i = 0; i < K; i++)
 		{
 			out += mul[i] * pos[i];
@@ -220,7 +297,7 @@ class System
 		return out;
 	}
 	
-	posvec index2pos(bigInt index)
+	posvec index2pos(indexType index)
 	{
 		posvec out(K,0);
 		bigInt iter = index;
@@ -289,7 +366,7 @@ class System
 		{
 			dick t_sig1;		//thread ones counter
 			
-			#pragma omp for schedule(dynamic, 5)
+			#pragma omp for schedule(dynamic, 1)
 			for (size_t iit = 0; iit < n ; iit++)
 			{
 				Branch* b = branch[iit];								
@@ -302,6 +379,7 @@ class System
 				dick::iterator it = t_sig1.begin();
 				while(it != t_sig1.end())
 				{
+					//cout << "adding, " << it->first <<" with " << it->second<<endl;
 					sig1[it->first] += it->second;
 					it++;
 				}
@@ -313,6 +391,10 @@ class System
 	
 	int iterate()
 	{
+		if (branch.size() == 0)
+			return 0;
+		
+		validSig = 0;
 		if (branch.size() == 1)
 			return iterate1();
 		else
