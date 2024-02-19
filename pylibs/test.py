@@ -1,4 +1,4 @@
-from .pyIPSIG import *
+from pyIPSIG import *
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -128,4 +128,5 @@ if __name__ == '__main__':
 	data = pd.DataFrame(times, columns = ['time','system size', 'Pedge'])
 	data['log time'] = np.log10(data['time'])
 	sns.violinplot(x='system size',y='log time', hue='Pedge',data=data, inner = 'points')
-	plt.show(0)
+	plt.savefig("testSIGNATUREplot.png")
+	plt.show(block=False)
